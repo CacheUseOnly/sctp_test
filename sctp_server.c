@@ -34,7 +34,7 @@ static void* getmsg(int fd, struct msghdr *msg,
 	void *buf, size_t *buflen, ssize_t *nrp, size_t cmsglen);
 
 int main(void) {
-	int sd, new_sd, buffer_len, flags = 0;
+	int sd, new_sd, buffer_len, frag_interleave, flags = 0;
 	char buffer[BUFFER_SIZE];
 	socklen_t sd_len;
 	struct iovec iov[1];
@@ -44,12 +44,27 @@ int main(void) {
 	struct sctp_event_subscribe events;
 	struct msghdr msg[1];
 	struct cmsghdr  *cmsg;
+	struct sctp_assoc_value assoc;
 	char   cbuf[sizeof(*cmsg) + sizeof(*sndrcvinfo)];
 	size_t msg_len = sizeof(*cmsg) + sizeof(*sndrcvinfo);
 
 	iov->iov_base = msg;
 
 	sd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+
+	frag_interleave = 2;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, &frag_interleave, sizeof(frag_interleave)) != 0, 
+		"set frag interleave"
+		)
+
+	memset(&assoc, 0, sizeof(struct sctp_assoc_value));
+	assoc.assoc_value = 1;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED, &assoc, sizeof(assoc)) != 0, 
+		"enable interleave"
+		)
+
 	addr->sin_family = AF_INET;
 	addr->sin_port = htons(SERVER_PORT);
 	addr->sin_addr.s_addr = INADDR_ANY;

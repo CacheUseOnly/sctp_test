@@ -24,7 +24,7 @@ int main ()
 	char *send_msg = 
 		#include "input_text"
 
-	int sd;
+	int sd, frag_interleave;
 	struct sockaddr_in addr;
 	size_t recv_len;
 	char   buf[BUFSIZ];
@@ -32,6 +32,7 @@ int main ()
     struct iovec  iov[1];
     struct cmsghdr  *cmsg;
     struct sctp_sndrcvinfo *sri;
+	struct sctp_assoc_value assoc;
     char   cbuf[sizeof (*cmsg) + sizeof (*sri)];
     union sctp_notification *snp;
 
@@ -48,6 +49,20 @@ int main ()
     msg->msg_iovlen = 1;
 
 	handle_error((sd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0, "create socket")
+
+	frag_interleave = 2;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, &frag_interleave, sizeof(frag_interleave)) != 0, 
+		"set frag interleave"
+		)
+
+	memset(&assoc, 0, sizeof(struct sctp_assoc_value));
+	assoc.assoc_value = 1;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED, &assoc, sizeof(assoc)) != 0, 
+		"enable interleave"
+		)
+
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(SERVER_PORT);
 	handle_error(inet_pton(AF_INET, SERVER_ADDR, &addr.sin_addr) <= 0, "inet_pton")

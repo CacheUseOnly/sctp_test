@@ -32,6 +32,10 @@ sudo ip netns exec 'server' ip link set 'eth0' up
 sudo ip netns exec 'client' ip route add default via $(CLIENTADDR) dev eth0
 sudo ip netns exec 'server' ip route add default via $(SERVERADDR) dev eth0
 
+# Support interleave
+sudo ip netns exec 'client' sysctl -w net.sctp.intl_enable=1
+sudo ip netns exec 'server' sysctl -w net.sctp.intl_enable=1
+
 # Test the connection (in both directions)
 sudo ip netns exec 'client' ping -c 2 $(SERVERADDR)
 sudo ip netns exec 'server' ping -c 2 $(CLIENTADDR)
