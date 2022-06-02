@@ -1,0 +1,10 @@
+# vscode config
+.vscode/
+
+# logs
+*.pcap
+*.log
+
+# binaries
+sctp_client
+sctp_server
