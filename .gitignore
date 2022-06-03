@@ -6,5 +6,6 @@
 *.log
 
 # binaries
-sctp_client
+sctp_client_I_DATA
+sctp_client_I_FORWARD
 sctp_server

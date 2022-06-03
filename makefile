@@ -1,17 +1,14 @@
 CC = gcc
 LINKER = -lsctp
 
-BINS = sctp_client sctp_server
+BINS = sctp_client_I_DATA sctp_client_I_FORWARD sctp_server
 
 .PHONY: all clean
 
-sctp_client: sctp_client.c
+%: %.c
 	${CC} $< ${LINKER} -o $@ 
 
-sctp_server: sctp_server.c
-	${CC} $< ${LINKER} -o $@ 
-
-all: sctp_client sctp_server
+all: ${BINS}
 
 clean:
 	rm ${BINS}

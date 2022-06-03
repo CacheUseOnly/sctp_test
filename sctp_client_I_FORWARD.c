@@ -1,26 +1,18 @@
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <netinet/sctp.h>
-#include <unistd.h>
+#include <signal.h>
 
-#define SERVER_ADDR "192.168.5.2"
-#define SERVER_PORT 36297
+#include "header.h"
 
-#define handle_error(condition, err, ...)				\
-		if ((condition)) {								\
-			fprintf(stderr, err);						\
-			fprintf(stderr, ": %s\n", strerror(errno));	\
-			__VA_ARGS__									\
-			exit(EXIT_FAILURE);							\
-		}
+void sigintHandler(int sig) {
+    system("sudo ip netns exec 'server' iptables -D INPUT -p sctp -m length --length 4:2000 -j DROP");
+    printf("unblocked\n");
+    fflush(stdout);
+    exit(EXIT_SUCCESS);
+}
 
 int main ()
 {
+    signal(SIGINT, sigintHandler);   
+
 	char *send_msg = 
 		#include "input_text"
 
@@ -50,6 +42,7 @@ int main ()
 
 	handle_error((sd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0, "create socket")
 
+    /* enable interleave support */
 	frag_interleave = 2;
 	handle_error(
 		setsockopt(sd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, &frag_interleave, sizeof(frag_interleave)) != 0, 
@@ -68,11 +61,23 @@ int main ()
 	handle_error(inet_pton(AF_INET, SERVER_ADDR, &addr.sin_addr) <= 0, "inet_pton")
 	handle_error(sctp_connectx(sd, (struct sockaddr*)&addr, 1, NULL) != 0, "sctp_connectx")
 
+    /* use iptable to block communication here */
+    system("sudo ip netns exec 'server' iptables -A INPUT -p sctp -m length --length 4:2000 -j DROP");
+    printf("blocked\n");
+    fflush(stdout);
+
+    /* support I-FORWARD */
+    sri->sinfo_flags = SCTP_PR_SCTP_RTX;
+    sri->sinfo_timetolive = 2;
 	handle_error(
-		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, NULL, 0, 0, 0, 0, 0, 0) < 0, 
+		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, 
+            (struct sockaddr*)&addr, sizeof(struct sockaddr_in), 
+            0, sri->sinfo_flags, 0, sri->sinfo_timetolive, 0) < 0, 
 		"sctp_sendmsg",
 		close(sd);
 		) 
+
+    /* unreachable */
 	handle_error((recv_len = recvmsg(sd, msg, 0)) < 0, "recvmsg", close(sd);)
 	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
