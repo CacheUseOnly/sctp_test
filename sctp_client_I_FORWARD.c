@@ -3,7 +3,7 @@
 #include "header.h"
 
 void sigintHandler(int sig) {
-    system("sudo ip netns exec 'server' iptables -D INPUT -p sctp -m length --length 4:2000 -j DROP");
+    system("sudo ip netns exec 'server' iptables -D INPUT -p sctp -m length --length 500:4000 -j DROP");
     printf("unblocked\n");
     fflush(stdout);
     exit(EXIT_SUCCESS);
@@ -14,6 +14,10 @@ int main ()
     signal(SIGINT, sigintHandler);   
 
 	char *send_msg = 
+		#include "input_text"
+    char *msg2 = 
+		#include "input_text"
+    char *msg3 = 
 		#include "input_text"
 
 	int sd, frag_interleave;
@@ -62,15 +66,31 @@ int main ()
 	handle_error(sctp_connectx(sd, (struct sockaddr*)&addr, 1, NULL) != 0, "sctp_connectx")
 
     /* use iptable to block communication here */
-    system("sudo ip netns exec 'server' iptables -A INPUT -p sctp -m length --length 4:2000 -j DROP");
+    system("sudo ip netns exec 'server' iptables -A INPUT -p sctp -m length --length 500:4000 -j DROP");
     printf("blocked\n");
     fflush(stdout);
 
     /* support I-FORWARD */
     sri->sinfo_flags = SCTP_PR_SCTP_RTX;
     sri->sinfo_timetolive = 2;
+    // sri->sinfo_flags = SCTP_PR_SCTP_TTL;
+    // sri->sinfo_timetolive = 1000;
 	handle_error(
 		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, 
+            (struct sockaddr*)&addr, sizeof(struct sockaddr_in), 
+            0, sri->sinfo_flags, 0, sri->sinfo_timetolive, 0) < 0, 
+		"sctp_sendmsg",
+		close(sd);
+		) 
+	handle_error(
+		sctp_sendmsg(sd, msg2, (size_t)strlen(msg2) + 1, 
+            (struct sockaddr*)&addr, sizeof(struct sockaddr_in), 
+            0, sri->sinfo_flags, 0, sri->sinfo_timetolive, 0) < 0, 
+		"sctp_sendmsg",
+		close(sd);
+		) 
+	handle_error(
+		sctp_sendmsg(sd, msg3, (size_t)strlen(msg3) + 1, 
             (struct sockaddr*)&addr, sizeof(struct sockaddr_in), 
             0, sri->sinfo_flags, 0, sri->sinfo_timetolive, 0) < 0, 
 		"sctp_sendmsg",
@@ -81,6 +101,9 @@ int main ()
 	handle_error((recv_len = recvmsg(sd, msg, 0)) < 0, "recvmsg", close(sd);)
 	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
+    system("sudo ip netns exec 'server' iptables -D INPUT -p sctp -m length --length 500:4000 -j DROP");
+    printf("unblocked\n");
+    fflush(stdout);
 	close(sd);
 	exit(EXIT_SUCCESS);
 }
