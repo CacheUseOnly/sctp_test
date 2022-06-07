@@ -22,7 +22,7 @@ int main(void) {
 	struct sctp_event_subscribe events;
 	struct msghdr msg[1];
 	struct cmsghdr  *cmsg;
-	struct sctp_assoc_value assoc;
+	struct sctp_assoc_value assoc_intl, assoc_reconf;
 	char   cbuf[sizeof(*cmsg) + sizeof(*sndrcvinfo)];
 	size_t msg_len = sizeof(*cmsg) + sizeof(*sndrcvinfo);
 
@@ -36,18 +36,28 @@ int main(void) {
 		"set frag interleave"
 		)
 
-	memset(&assoc, 0, sizeof(struct sctp_assoc_value));
-	assoc.assoc_value = 1;
+	memset(&assoc_intl, 0, sizeof(struct sctp_assoc_value));
+	assoc_intl.assoc_id = 0;
+	assoc_intl.assoc_value = 1;
 	handle_error(
-		setsockopt(sd, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED, &assoc, sizeof(assoc)) != 0, 
+		setsockopt(sd, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED, &assoc_intl, sizeof(assoc_intl)) != 0, 
 		"enable interleave"
 		)
+
 
 	addr->sin_family = AF_INET;
 	addr->sin_port = htons(SERVER_PORT);
 	addr->sin_addr.s_addr = INADDR_ANY;
 	sd_len = sizeof(addr);
 	handle_error(bind(sd, (struct sockaddr*)&addr, sizeof(addr)) < 0, "bind")
+
+	memset(&assoc_reconf, 0, sizeof(struct sctp_assoc_value));
+	assoc_reconf.assoc_id = 1;
+	assoc_reconf.assoc_value = SCTP_ENABLE_RESET_STREAM_REQ;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_ENABLE_STREAM_RESET, &assoc_reconf, sizeof(assoc_reconf)) != 0, 
+		"enable reset"
+		)
 
 	memset(&initmsg, 0, sizeof(struct sctp_initmsg));
 	initmsg.sinit_max_attempts = 3;
@@ -78,16 +88,6 @@ int main(void) {
 
 		echo(new_sd);
 	}
-	// handle_error(
-	// 	(buffer_len = sctp_recvmsg(new_sd, buffer, BUFFER_SIZE, (struct sockaddr*)NULL, 0, sndrcvinfo, &flags)) < 0, 
-	// 	"sctp_recvmsg",
-	// 	close(sd); close(new_sd);
-	// 	)
-	// printf("%s\n", buffer);
-
-	// close(sd);
-	// close(new_sd);
-	// exit(EXIT_SUCCESS);
 }
 
 /*
