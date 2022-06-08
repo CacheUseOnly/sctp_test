@@ -1,10 +1,11 @@
 #include "header.h"
 
-#define SRS_STREAM_NUM 5
+#define STREAM_NUM 4
+#define ADD_STREAM 1
 
 int main ()
 {
-	char *send_msg = "reset test\n";
+	char *send_msg;
 
 	int sd;
 	struct sockaddr_in addr;
@@ -16,6 +17,7 @@ int main ()
     struct sctp_sndrcvinfo *sri;
 	struct sctp_assoc_value assoc;
 	struct sctp_reset_streams *srs;
+	struct sctp_add_streams *sas;
     char   cbuf[sizeof (*cmsg) + sizeof (*sri)];
 
 	/* Initialize the message header for receiving */
@@ -45,19 +47,55 @@ int main ()
 	handle_error(inet_pton(AF_INET, SERVER_ADDR, &addr.sin_addr) <= 0, "inet_pton")
 	handle_error(sctp_connectx(sd, (struct sockaddr*)&addr, 1, NULL) != 0, "sctp_connectx")
 
-	srs = (struct sctp_reset_streams*) malloc(sizeof(sctp_assoc_t) + (2 + SRS_STREAM_NUM) * sizeof(uint16_t));
+	srs = (struct sctp_reset_streams*) malloc(sizeof(sctp_assoc_t) + (2 + STREAM_NUM) * sizeof(uint16_t));
 	srs->srs_assoc_id = 0;
-	srs->srs_flags = (SCTP_STREAM_RESET_INCOMING | SCTP_STREAM_RESET_OUTGOING);
-	srs->srs_number_streams = SRS_STREAM_NUM;
+	srs->srs_number_streams = STREAM_NUM;
 	for (int i = 0; i < srs->srs_number_streams; ++i) {
 		srs->srs_stream_list[i] = i;
 	}
+
+	// reset I/O streams
+	send_msg = "reset I/O";
+	srs->srs_flags = (SCTP_STREAM_RESET_INCOMING | SCTP_STREAM_RESET_OUTGOING);
 	handle_error(
 		setsockopt(sd, IPPROTO_SCTP, SCTP_RESET_STREAMS, srs, 
-			(socklen_t)(sizeof(sctp_assoc_t) + (2 + SRS_STREAM_NUM) * sizeof(uint16_t))) != 0, 
+			(socklen_t)(sizeof(sctp_assoc_t) + (2 + STREAM_NUM) * sizeof(uint16_t))) != 0, 
 		"reset streams"
 		)
+	handle_error(
+		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, NULL, 0, 0, 0, 0, 0, 0) < 0, 
+		"sctp_sendmsg",
+		close(sd);
+		) 
+	handle_error((recv_len = recvmsg(sd, msg, 0)) < 0, "recvmsg", close(sd);)
+	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
+	// reset assoc
+	send_msg = "reset assoc";
+	srs->srs_flags = SCTP_ENABLE_RESET_ASSOC_REQ;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_RESET_ASSOC, srs, 
+			(socklen_t)(sizeof(sctp_assoc_t) + (2 + STREAM_NUM) * sizeof(uint16_t))) != 0, 
+		"reset streams"
+		)
+	handle_error(
+		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, NULL, 0, 0, 0, 0, 0, 0) < 0, 
+		"sctp_sendmsg",
+		close(sd);
+		) 
+	handle_error((recv_len = recvmsg(sd, msg, 0)) < 0, "recvmsg", close(sd);)
+	printf("server msg: %s\n", msg->msg_iov->iov_base);
+
+	// add stream
+	send_msg = "add stream";
+	sas = (struct sctp_add_streams *)malloc(sizeof(struct sctp_add_streams));
+	sas->sas_assoc_id = 3;
+	sas->sas_instrms = ADD_STREAM;
+	sas->sas_outstrms= ADD_STREAM;
+	handle_error(
+		setsockopt(sd, IPPROTO_SCTP, SCTP_ADD_STREAMS, sas, (socklen_t)sizeof(struct sctp_add_streams)) != 0, 
+		"reset streams"
+		)
 	handle_error(
 		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, NULL, 0, 0, 0, 0, 0, 0) < 0, 
 		"sctp_sendmsg",
