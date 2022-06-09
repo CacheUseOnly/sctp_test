@@ -52,7 +52,7 @@ int main(void) {
 	handle_error(bind(sd, (struct sockaddr*)&addr, sizeof(addr)) < 0, "bind")
 
 	memset(&assoc_reconf, 0, sizeof(struct sctp_assoc_value));
-	assoc_reconf.assoc_id = 1;
+	assoc_reconf.assoc_id = 0;
 	assoc_reconf.assoc_value = SCTP_ENABLE_RESET_STREAM_REQ;
 	handle_error(
 		setsockopt(sd, IPPROTO_SCTP, SCTP_ENABLE_STREAM_RESET, &assoc_reconf, sizeof(assoc_reconf)) != 0, 
@@ -182,7 +182,7 @@ static void echo(int fd)
 		msg->msg_control = cbuf;
 		msg->msg_controllen = sizeof (*cmsg) + sizeof (*sri);
 
-		printf("got %u bytes on stream %hu:\n", nr,
+		printf("\ngot %u bytes on stream %hu:\n", nr,
 			   sri->sinfo_stream);
 		write(0, buf, nr);
 

@@ -91,7 +91,7 @@ int main ()
 	/* add stream */
 	send_msg = "add stream";
 	sas = (struct sctp_add_streams *)malloc(sizeof(struct sctp_add_streams));
-	sas->sas_assoc_id = 1;
+	sas->sas_assoc_id = 0;
 	sas->sas_instrms = ADD_STREAM;
 	sas->sas_outstrms= ADD_STREAM;
 	handle_error(
