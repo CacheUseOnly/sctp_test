@@ -53,7 +53,7 @@ int main(void) {
 
 	memset(&assoc_reconf, 0, sizeof(struct sctp_assoc_value));
 	assoc_reconf.assoc_id = 0;
-	assoc_reconf.assoc_value = SCTP_ENABLE_RESET_STREAM_REQ;
+    assoc_reconf.assoc_value = (SCTP_ENABLE_RESET_STREAM_REQ | SCTP_ENABLE_RESET_ASSOC_REQ | SCTP_ENABLE_CHANGE_ASSOC_REQ);
 	handle_error(
 		setsockopt(sd, IPPROTO_SCTP, SCTP_ENABLE_STREAM_RESET, &assoc_reconf, sizeof(assoc_reconf)) != 0, 
 		"enable reset"
