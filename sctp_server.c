@@ -16,7 +16,7 @@ int main(void) {
 	char buffer[BUFFER_SIZE];
 	socklen_t sd_len;
 	struct iovec iov[1];
-	struct sockaddr_in addr[1];
+	struct sockaddr_in addr[2];
 	struct sctp_initmsg initmsg;
 	struct sctp_sndrcvinfo *sndrcvinfo;
 	struct sctp_event_subscribe events;
@@ -44,12 +44,15 @@ int main(void) {
 		"enable interleave"
 		)
 
-
-	addr->sin_family = AF_INET;
-	addr->sin_port = htons(SERVER_PORT);
-	addr->sin_addr.s_addr = INADDR_ANY;
-	sd_len = sizeof(addr);
-	handle_error(bind(sd, (struct sockaddr*)&addr, sizeof(addr)) < 0, "bind")
+	sd_len = sizeof(struct sockaddr_in);
+	addr[1].sin_family = AF_INET;
+	addr[1].sin_port = htons(SERVER_PORT);
+	addr[1].sin_addr.s_addr = inet_addr(SERVER_ADDR);
+	addr[2].sin_family = AF_INET;
+	addr[2].sin_port = htons(SERVER_PORT);
+	addr[2].sin_addr.s_addr = inet_addr(SERVER_ADDR2);
+	handle_error(bind(sd, (struct sockaddr *)&addr[1], sizeof(struct sockaddr_in)) < 0, "bind1")
+	handle_error(sctp_bindx(sd, (struct sockaddr*)&addr[2], 1, SCTP_BINDX_ADD_ADDR) != 0, "sctp_bindx")
 
 	memset(&assoc_reconf, 0, sizeof(struct sctp_assoc_value));
 	assoc_reconf.assoc_id = 0;

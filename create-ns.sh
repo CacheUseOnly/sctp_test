@@ -2,6 +2,8 @@
 
 CLIENTADDR=192.168.5.1
 SERVERADDR=192.168.5.2
+CLIENTADDR2=192.168.5.3
+SERVERADDR2=192.168.5.4
 
 # Create two network namespaces
 sudo ip netns add 'client'
@@ -21,6 +23,8 @@ sudo ip netns exec 'server' ip link set 'myns-2-eth0' name 'eth0'
 # Assign an address to each interface
 sudo ip netns exec 'client' ip addr add $CLIENTADDR/24 dev eth0
 sudo ip netns exec 'server' ip addr add $SERVERADDR/24 dev eth0
+sudo ip netns exec 'client' ip addr add $CLIENTADDR2/24 dev eth0
+sudo ip netns exec 'server' ip addr add $SERVERADDR2/24 dev eth0
 
 # Bring up the interfaces (the veth interfaces the loopback interfaces)
 sudo ip netns exec 'client' ip link set 'lo' up
@@ -47,6 +51,11 @@ sudo ip netns exec 'server' sysctl -w net.sctp.addip_enable=1
 sudo ip netns exec 'client' sysctl -w net.sctp.default_auto_asconf=1
 sudo ip netns exec 'server' sysctl -w net.sctp.default_auto_asconf=1
 
+sudo ip netns exec 'client' sysctl -w net.sctp.addip_noauth_enable=1
+sudo ip netns exec 'server' sysctl -w net.sctp.addip_noauth_enable=1
+
 # Test the connection (in both directions)
-sudo ip netns exec 'client' ping -c 2 $SERVERADDR
-sudo ip netns exec 'server' ping -c 2 $CLIENTADDR
+sudo ip netns exec 'client' ping -c 1 $SERVERADDR
+sudo ip netns exec 'server' ping -c 1 $CLIENTADDR
+sudo ip netns exec 'client' ping -c 1 $SERVERADDR2
+sudo ip netns exec 'server' ping -c 1 $CLIENTADDR2

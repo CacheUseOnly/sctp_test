@@ -1,7 +1,5 @@
 #include "header.h"
 
-#define ADDR_2 "192.168.5.3"
-
 int main ()
 {
 	char *send_msg;
@@ -49,7 +47,7 @@ int main ()
 	/* add one more address */
 	addr2.sin_family = AF_INET;
 	addr.sin_port = htons(SERVER_PORT);
-	handle_error(inet_pton(AF_INET, ADDR_2, &addr2.sin_addr) <= 0, "inet_pton")
+	handle_error(inet_pton(AF_INET, SERVER_ADDR2, &addr2.sin_addr) <= 0, "inet_pton")
 	handle_error(setsockopt(sd, SOL_SCTP, SCTP_SOCKOPT_BINDX_ADD, &addr2, sizeof(struct sockaddr_in)) != -1, "add address")
 
 	send_msg = "add address";
@@ -77,7 +75,7 @@ int main ()
 	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
 	/* set primary address */
-	handle_error(inet_pton(AF_INET, "192.168.5.1", &addr.sin_addr) <= 0, "inet_pton")	/* set to client's address*/
+	handle_error(inet_pton(AF_INET, CLIENT_ADDR2, &addr.sin_addr) <= 0, "inet_pton")	/* set to client's address*/
 	memcpy(&peer_prim.sspp_addr, &addr.sin_addr, sizeof(struct sockaddr_in));
 	handle_error(
 		setsockopt(sd, IPPROTO_SCTP, SCTP_PRIMARY_ADDR, &peer_prim, sizeof(struct sctp_setpeerprim)) != -1,
