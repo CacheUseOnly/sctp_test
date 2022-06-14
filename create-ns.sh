@@ -40,6 +40,13 @@ sudo ip netns exec 'server' sysctl -w net.sctp.intl_enable=1
 sudo ip netns exec 'client' sysctl -w net.sctp.reconf_enable=1
 sudo ip netns exec 'server' sysctl -w net.sctp.reconf_enable=1
 
+# Support ASCONF
+sudo ip netns exec 'client' sysctl -w net.sctp.addip_enable=1
+sudo ip netns exec 'server' sysctl -w net.sctp.addip_enable=1
+
+sudo ip netns exec 'client' sysctl -w net.sctp.default_auto_asconf=1
+sudo ip netns exec 'server' sysctl -w net.sctp.default_auto_asconf=1
+
 # Test the connection (in both directions)
 sudo ip netns exec 'client' ping -c 2 $SERVERADDR
 sudo ip netns exec 'server' ping -c 2 $CLIENTADDR
