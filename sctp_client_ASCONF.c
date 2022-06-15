@@ -1,11 +1,14 @@
 #include "header.h"
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 int main ()
 {
 	char *send_msg;
 
 	int sd;
-	struct sockaddr_in addr, addr2;
+	struct sockaddr_in local, addr, addr2;
 	struct msghdr  msg[1];
 	struct iovec  iov[1];
 	struct cmsghdr  *cmsg;
@@ -30,6 +33,12 @@ int main ()
 
 	handle_error((sd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0, "create socket")
 
+	memset(&local, 0, sizeof(struct sockaddr_in));
+	local.sin_family = AF_INET;
+	local.sin_port = htons(CLIENT_PORT);
+	handle_error(inet_pton(AF_INET, CLIENT_ADDR, &local.sin_addr) <= 0, "local inet_pton")
+	handle_error(bind(sd, (struct sockaddr*)&local, sizeof(struct sockaddr_in)) < 0, "bind")
+
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(SERVER_PORT);
 	handle_error(inet_pton(AF_INET, SERVER_ADDR, &addr.sin_addr) <= 0, "inet_pton")
@@ -44,11 +53,12 @@ int main ()
 	handle_error((recv_len = recvmsg(sd, msg, 0)) < 0, "recvmsg", close(sd);)
 	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
-	/* add one more address */
+	/* add one more address to client endpoint */
+	memset(&addr2, 0, sizeof(struct sockaddr_in));
 	addr2.sin_family = AF_INET;
-	addr.sin_port = htons(SERVER_PORT);
-	handle_error(inet_pton(AF_INET, SERVER_ADDR2, &addr2.sin_addr) <= 0, "inet_pton")
-	handle_error(setsockopt(sd, SOL_SCTP, SCTP_SOCKOPT_BINDX_ADD, &addr2, sizeof(struct sockaddr_in)) != -1, "add address")
+	addr2.sin_port = htons(CLIENT_PORT);
+	handle_error(inet_pton(AF_INET, CLIENT_ADDR2, &addr2.sin_addr) <= 0, "inet_pton")
+	handle_error(setsockopt(sd, SOL_SCTP, SCTP_SOCKOPT_BINDX_ADD, &addr2, sizeof(struct sockaddr_in)) == -1, "add address")
 
 	send_msg = "add address";
 	handle_error(
@@ -60,9 +70,9 @@ int main ()
 	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
 	/* set peer primary address */
-	memcpy(&prim.ssp_addr, &addr.sin_addr, sizeof(struct sockaddr_in));
+	memcpy(&prim.ssp_addr, (struct sockaddr*)&addr2, sizeof(struct sockaddr_in));
 	handle_error(
-		setsockopt(sd, IPPROTO_SCTP, SCTP_SET_PEER_PRIMARY_ADDR, &prim, sizeof(struct sctp_prim)) != -1,
+		setsockopt(sd, IPPROTO_SCTP, SCTP_SET_PEER_PRIMARY_ADDR, &prim, sizeof(struct sctp_prim)) == -1,
 		"set peer primary address")
 
 	send_msg = "set peer primary address";
@@ -75,13 +85,24 @@ int main ()
 	printf("server msg: %s\n", msg->msg_iov->iov_base);
 
 	/* set primary address */
-	handle_error(inet_pton(AF_INET, CLIENT_ADDR2, &addr.sin_addr) <= 0, "inet_pton")	/* set to client's address*/
-	memcpy(&peer_prim.sspp_addr, &addr.sin_addr, sizeof(struct sockaddr_in));
+	handle_error(inet_pton(AF_INET, SERVER_ADDR2, &addr.sin_addr) <= 0, "inet_pton")	/* set to server's secondary address*/
+	memcpy(&peer_prim.sspp_addr, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));
 	handle_error(
-		setsockopt(sd, IPPROTO_SCTP, SCTP_PRIMARY_ADDR, &peer_prim, sizeof(struct sctp_setpeerprim)) != -1,
+		setsockopt(sd, IPPROTO_SCTP, SCTP_PRIMARY_ADDR, &peer_prim, sizeof(struct sctp_setpeerprim)) == -1,
 		"set primary address")
 
 	send_msg = "set primary address";
+	handle_error(
+		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, NULL, 0, 0, 0, 0, 0, 0) < 0, 
+		"sctp_sendmsg",
+		close(sd);
+		) 
+	handle_error((recv_len = recvmsg(sd, msg, 0)) < 0, "recvmsg", close(sd);)
+	printf("server msg: %s\n", msg->msg_iov->iov_base);
+
+	/* remove one client's address */
+	handle_error(setsockopt(sd, SOL_SCTP, SCTP_SOCKOPT_BINDX_REM, &addr2, sizeof(struct sockaddr_in)) == -1, "remove address")
+	send_msg = "remove address";
 	handle_error(
 		sctp_sendmsg(sd, send_msg, (size_t)strlen(send_msg) + 1, NULL, 0, 0, 0, 0, 0, 0) < 0, 
 		"sctp_sendmsg",
