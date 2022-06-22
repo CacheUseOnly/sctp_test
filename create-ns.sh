@@ -4,6 +4,10 @@ CLIENTADDR=192.168.5.1
 SERVERADDR=192.168.5.2
 CLIENTADDR2=192.168.5.3
 SERVERADDR2=192.168.5.4
+CLIENTADDR_6=2000::5:1
+SERVERADDR_6=2000::5:2
+CLIENTADDR2_6=2000::5:3
+SERVERADDR2_6=2000::5:4
 
 # Create two network namespaces
 sudo ip netns add 'client'
@@ -25,6 +29,10 @@ sudo ip netns exec 'client' ip addr add $CLIENTADDR/24 dev eth0
 sudo ip netns exec 'server' ip addr add $SERVERADDR/24 dev eth0
 sudo ip netns exec 'client' ip addr add $CLIENTADDR2/24 dev eth0
 sudo ip netns exec 'server' ip addr add $SERVERADDR2/24 dev eth0
+sudo ip netns exec 'client' ip -6 addr add $CLIENTADDR_6/64 dev eth0
+sudo ip netns exec 'server' ip -6 addr add $SERVERADDR_6/64 dev eth0
+sudo ip netns exec 'client' ip -6 addr add $CLIENTADDR2_6/64 dev eth0
+sudo ip netns exec 'server' ip -6 addr add $SERVERADDR2_6/64 dev eth0
 
 # Bring up the interfaces (the veth interfaces the loopback interfaces)
 sudo ip netns exec 'client' ip link set 'lo' up
@@ -59,3 +67,8 @@ sudo ip netns exec 'client' ping -c 1 $SERVERADDR
 sudo ip netns exec 'server' ping -c 1 $CLIENTADDR
 sudo ip netns exec 'client' ping -c 1 $SERVERADDR2
 sudo ip netns exec 'server' ping -c 1 $CLIENTADDR2
+
+sudo ip netns exec 'client' ping6 -c 1 $SERVERADDR_6
+sudo ip netns exec 'server' ping6 -c 1 $CLIENTADDR_6
+sudo ip netns exec 'client' ping6 -c 1 $SERVERADDR2_6
+sudo ip netns exec 'server' ping6 -c 1 $CLIENTADDR2_6
