@@ -57,11 +57,7 @@ int main ()
 	memset(&addr2, 0, sizeof(struct sockaddr_in6));
 	addr2.sin6_family = AF_INET6;
 	addr2.sin6_port = htons(CLIENT_PORT);
-<<<<<<< HEAD
 	handle_error(inet_pton(AF_INET6, CLIENT_ADDR2_6, &addr2.sin6_addr) <= 0, "inet_pton")
-=======
-	handle_error(inet_pton(AF_INET, CLIENT_ADDR2_6, &addr2.sin6_addr) <= 0, "inet_pton")
->>>>>>> 89627497c7cd0f8d66861060f2aaf8ae96deeefc
 	handle_error(setsockopt(sd, SOL_SCTP, SCTP_SOCKOPT_BINDX_ADD, &addr2, sizeof(struct sockaddr_in6)) == -1, "add address")
 
 	send_msg = "add address";
